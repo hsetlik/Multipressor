@@ -1,4 +1,5 @@
 #include "Multipressor/IIRFilter.h"
+#include "juce_core/juce_core.h"
 
 SingleIIR::SingleIIR() : core(nullptr) {}
 
@@ -85,5 +86,72 @@ void SingleIIR::prepareFilter() {
       core.reset(new iir_core_t(iir_coeffs_t::makePeakFilter(
           sampleRate, params.cutoff, params.q, params.gain)));
       break;
+  }
+}
+
+//=================================================================================
+
+void CascadeIIR::setParams(cascade_iir_params_t other) {
+  params = other;
+  if (filtersPrepared)
+    prepareCascade();
+}
+
+void CascadeIIR::prepare(double sr) {
+  sampleRate = sr;
+  prepareCascade();
+  filtersPrepared = true;
+}
+
+float CascadeIIR::process(float input) {
+  float out = input;
+  for (int i = 0; i < filters.size(); i++) {
+    out = filters[i]->processSample(out);
+  }
+  return out;
+}
+
+void CascadeIIR::prepareCascade() {
+  // 1. use the functions from dsp::FilterDesign to generate a
+  // list of coeffs
+  juce::ReferenceCountedArray<iir_coeffs_t> arr;
+  iir_cascade_t type = (iir_cascade_t)params.filterType;
+  switch (type) {
+    case ButterworthLowPass1:
+      arr = cascade_d::designIIRLowpassHighOrderButterworthMethod(
+          params.cutoff, sampleRate, params.order);
+      break;
+    case ButterworthLowPass2:
+      arr = cascade_d::designIIRLowpassHighOrderButterworthMethod(
+          params.cutoff, sampleRate, params.transitionWidth,
+          params.passbandGain, params.stopbandGain);
+      break;
+    case ButterworthHighPass:
+      arr = cascade_d::designIIRHighpassHighOrderButterworthMethod(
+          params.cutoff, sampleRate, params.order);
+      break;
+    case Chebyshev1LowPass:
+      arr = cascade_d::designIIRLowpassHighOrderChebyshev1Method(
+          params.cutoff, sampleRate, params.transitionWidth,
+          params.passbandGain, params.stopbandGain);
+      break;
+    case Chebyshev2LowPass:
+      arr = cascade_d::designIIRLowpassHighOrderChebyshev2Method(
+          params.cutoff, sampleRate, params.transitionWidth,
+          params.passbandGain, params.stopbandGain);
+      break;
+    case EllipticLowPass:
+      arr = cascade_d::designIIRLowpassHighOrderEllipticMethod(
+          params.cutoff, sampleRate, params.transitionWidth,
+          params.passbandGain, params.stopbandGain);
+      break;
+    default:
+      break;
+  }
+
+  // 2. repopulate the OwnedArray with the new filters
+  filters.clear();
+  for (int i = 0; i < arr.size(); i++) {
+    filters.add(new iir_core_t(arr[i]));
   }
 }
