@@ -82,6 +82,7 @@ struct cascade_iir_params_t {
   float transitionWidth = 0.5f;
   float passbandGain = 1.0;
   float stopbandGain = 0.5f;
+  cascade_iir_params_t() {}
   cascade_iir_params_t& operator=(const cascade_iir_params_t& other) {
     filterType = other.filterType;
     order = other.order;
@@ -90,6 +91,14 @@ struct cascade_iir_params_t {
     passbandGain = other.passbandGain;
     stopbandGain = other.stopbandGain;
     return *this;
+  }
+  cascade_iir_params_t(const cascade_iir_params_t& other) {
+    filterType = other.filterType;
+    order = other.order;
+    cutoff = other.cutoff;
+    transitionWidth = other.transitionWidth;
+    passbandGain = other.passbandGain;
+    stopbandGain = other.stopbandGain;
   }
 };
 
