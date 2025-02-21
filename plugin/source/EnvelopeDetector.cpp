@@ -1,5 +1,6 @@
 #include "Multipressor/EnvelopeDetector.h"
 #include "Multipressor/IIRFilter.h"
+#include "Multipressor/MathHelpers.h"
 
 EnvelopeDetector::EnvelopeDetector() {
   // initialize the filters here
@@ -36,4 +37,17 @@ float EnvelopeDetector::process(float raw) {
     currentPeak = input;
   }
   return outputFilter.process(prevPhasePeak);
+}
+
+float RMSMeter::process(float input) {
+  if (samplesInSum >= window) {
+    // we've reached the end of a window
+    prevValue = Math::fastSqrt(squareSum);
+    samplesInSum = 0;
+    squareSum = 0.0f;
+  } else {
+    ++samplesInSum;
+  }
+  squareSum += (input * input);
+  return prevValue;
 }
